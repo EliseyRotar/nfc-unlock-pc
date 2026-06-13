@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NFC Unlock PC - Setup</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <h1>NFC Unlock PC - Setup</h1>
+
+    <!-- Step 1: pick a reader -->
+    <section id="step-reader" class="step active">
+      <h2>Step 1 - Plug in your NFC reader</h2>
+      <p class="hint">Any PC/SC-compatible reader works (ACR122U, ACR1252U, PN532-based
+        USB readers, etc.) - not only the ACR122U.</p>
+      <div id="reader-list" class="reader-list">
+        <p class="muted">Looking for readers...</p>
+      </div>
+      <button id="btn-refresh-readers">Refresh</button>
+    </section>
+
+    <!-- Step 2: tap device -->
+    <section id="step-tap" class="step">
+      <h2>Step 2 - Tap the device you want to unlock with</h2>
+      <p class="hint">Hold your phone (with the NFC Unlock Companion app open) or your
+        NFC tag against <span id="selected-reader-name">the reader</span>.</p>
+      <div id="tap-status" class="tap-status">
+        <div class="spinner"></div>
+        <p>Waiting for a tap...</p>
+      </div>
+    </section>
+
+    <!-- Step 3: confirm -->
+    <section id="step-confirm" class="step">
+      <h2>Step 3 - Is this the right device?</h2>
+      <p class="hint">Detected identifier:</p>
+      <p class="identifier" id="detected-identifier"></p>
+      <div class="row">
+        <button id="btn-confirm-yes" class="primary">Yes, register this device</button>
+        <button id="btn-confirm-no">No, scan again</button>
+      </div>
+    </section>
+
+    <!-- Step 4: credentials (optional) -->
+    <section id="step-credentials" class="step">
+      <h2>Step 4 - Account password (optional)</h2>
+      <p class="hint">
+        Only needed if you want this device to <strong>type your password</strong> at the
+        lock screen (Tier 2). On Linux, skip this if you'll use the recommended
+        passwordless PAM setup (Tier 1) in the next step.
+      </p>
+      <label>Username (Windows only, leave blank to use the current user)
+        <input type="text" id="input-username" autocomplete="username">
+      </label>
+      <label>Password (stored in your OS keyring - never written to a file)
+        <input type="password" id="input-password" autocomplete="new-password">
+      </label>
+      <div class="row">
+        <button id="btn-save" class="primary">Save and continue</button>
+      </div>
+    </section>
+
+    <!-- Step 5: next steps -->
+    <section id="step-done" class="step">
+      <h2>All set</h2>
+      <p id="done-title" class="hint"></p>
+      <div id="done-commands"></div>
+      <p id="done-note" class="muted"></p>
+      <p class="muted">You can close this tab now.</p>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
