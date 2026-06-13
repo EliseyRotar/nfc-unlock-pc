@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:gravity="center_vertical">
+
+    <TextView
+        android:id="@+id/labelToken"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:text="@string/token_label" />
+
+    <TextView
+        android:id="@+id/textToken"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="16dp"
+        android:textIsSelectable="true"
+        android:textSize="20sp"
+        android:fontFamily="monospace"
+        android:padding="12dp"
+        android:background="#11000000" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="24dp"
+        android:text="@string/token_explainer" />
+
+    <Button
+        android:id="@+id/buttonRegenerate"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/regenerate_button" />
+
+</LinearLayout>
