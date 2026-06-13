@@ -58,7 +58,7 @@ def install_linux():
 
     print()
     print("Next steps:")
-    print("  1. python3 src/main.py enroll")
+    print("  1. python3 src/main.py setup   (opens a setup wizard in your browser)")
     print("  2. bash scripts/install_service_linux.sh   (installs a systemd --user service)")
 
 
@@ -118,7 +118,7 @@ def install_windows():
     print("Next steps:")
     print("  1. Install the official ACS ACR122U driver:")
     print("     https://www.acs.com.hk/en/driver/3/acr122u-usb-nfc-reader/")
-    print("  2. python src\\main.py enroll   (use .venv\\Scripts\\python.exe if one was created above)")
+    print("  2. python src\\main.py setup   (opens a setup wizard in your browser; use .venv\\Scripts\\python.exe if one was created above)")
     print("  3. Run scripts\\install_task.ps1 from an elevated PowerShell")
 
 
@@ -128,7 +128,7 @@ def install_macos():
     pip_install()
     print()
     print("Next steps:")
-    print("  1. python3 src/main.py enroll")
+    print("  1. python3 src/main.py setup   (opens a setup wizard in your browser)")
     print("  2. Wire up src/main.py run via launchd if you'd like it to run at login.")
 
 
