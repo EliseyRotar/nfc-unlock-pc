@@ -2,8 +2,9 @@
 Entry point.
 
 Usage:
-    python src\\main.py            - run the unlock service (default)
-    python src\\main.py enroll     - enroll a new NFC tag + password
+    python src\\main.py            - run the unlock service (default, Tier 2 only)
+    python src\\main.py setup      - open the browser-based setup wizard (recommended)
+    python src\\main.py enroll     - enroll a new NFC tag + password (CLI wizard)
     python src\\main.py list       - list connected PC/SC readers
 """
 
@@ -18,7 +19,10 @@ from nfc_unlock import enroll, service, reader  # noqa: E402
 def main():
     cmd = sys.argv[1] if len(sys.argv) > 1 else "run"
 
-    if cmd == "enroll":
+    if cmd == "setup":
+        from nfc_unlock import setup_server
+        setup_server.main()
+    elif cmd == "enroll":
         enroll.main()
     elif cmd == "list":
         for r in reader.list_readers():
