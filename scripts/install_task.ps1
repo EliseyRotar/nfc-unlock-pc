@@ -13,13 +13,23 @@
 #>
 
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
-$Python = (Get-Command python -ErrorAction SilentlyContinue).Source
-if (-not $Python) {
-    $Python = (Get-Command py -ErrorAction SilentlyContinue).Source
+
+# Prefer the project virtualenv (created by install.py if the system Python
+# had no prebuilt pyscard wheel), otherwise fall back to python/py on PATH.
+$VenvPython = Join-Path $ProjectRoot ".venv\Scripts\python.exe"
+if (Test-Path $VenvPython) {
+    $Python = $VenvPython
+} else {
+    $Python = (Get-Command python -ErrorAction SilentlyContinue).Source
+    if (-not $Python) {
+        $Python = (Get-Command py -ErrorAction SilentlyContinue).Source
+    }
 }
 if (-not $Python) {
-    throw "Python was not found on PATH. Install Python 3.10+ and re-run."
+    throw "Python was not found. Run 'python install.py' from the project root first."
 }
+
+Write-Host "Using Python: $Python"
 
 $MainScript = Join-Path $ProjectRoot "src\main.py"
 
