@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NFC Unlock PC — tap your phone to unlock Windows</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --panel: #161b22;
+      --accent: #58a6ff;
+      --accent2: #3fb950;
+      --text: #c9d1d9;
+      --muted: #8b949e;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+    header {
+      padding: 4rem 1.5rem 3rem;
+      text-align: center;
+      background: radial-gradient(circle at top, #1f2937 0%, var(--bg) 70%);
+    }
+    header h1 {
+      font-size: 2.6rem;
+      margin: 0 0 0.5rem;
+      color: #fff;
+    }
+    header p {
+      color: var(--muted);
+      font-size: 1.15rem;
+      max-width: 640px;
+      margin: 0 auto;
+    }
+    .badge {
+      display: inline-block;
+      margin-top: 1.2rem;
+      padding: 0.4rem 1rem;
+      border-radius: 999px;
+      background: rgba(63, 185, 80, 0.15);
+      color: var(--accent2);
+      font-size: 0.85rem;
+      border: 1px solid rgba(63, 185, 80, 0.4);
+    }
+    main {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 0 1.5rem 4rem;
+    }
+    .diagram {
+      background: var(--panel);
+      border: 1px solid #30363d;
+      border-radius: 12px;
+      padding: 1.5rem;
+      overflow-x: auto;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin: 2rem 0;
+      white-space: pre;
+    }
+    section {
+      margin: 2.5rem 0;
+    }
+    h2 {
+      color: #fff;
+      border-bottom: 1px solid #30363d;
+      padding-bottom: 0.5rem;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid #30363d;
+      border-radius: 12px;
+      padding: 1.25rem;
+    }
+    .card h3 {
+      margin-top: 0;
+      color: var(--accent);
+      font-size: 1.05rem;
+    }
+    code, pre {
+      background: #1f242c;
+      border-radius: 6px;
+      padding: 0.15rem 0.4rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.9em;
+    }
+    pre {
+      display: block;
+      padding: 1rem;
+      overflow-x: auto;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.85rem;
+      padding: 2rem 1.5rem 3rem;
+    }
+    .steps {
+      list-style: none;
+      padding: 0;
+      counter-reset: step;
+    }
+    .steps li {
+      counter-increment: step;
+      position: relative;
+      padding-left: 2.6rem;
+      margin-bottom: 1rem;
+    }
+    .steps li::before {
+      content: counter(step);
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 1.8rem;
+      height: 1.8rem;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #0d1117;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>📲 NFC Unlock PC</h1>
+    <p>Tap your phone on a USB ACR122U reader and your Windows PC unlocks itself — no app, just a sticker.</p>
+    <span class="badge">MIT Licensed · Python · Windows 10/11 &amp; Linux</span>
+  </header>
+
+  <main>
+    <section>
+      <h2>What it does</h2>
+      <p>
+        Stick a cheap NFC tag (NTAG213/215) on the back of your phone. When you tap
+        your phone on a connected <strong>ACR122U USB NFC reader</strong>, a small
+        background service running on your PC recognises the tag's unique ID,
+        retrieves your stored password from the OS keyring, and types it into the
+        lock screen for you — instantly unlocking your session. Works on both
+        <strong>Windows</strong> (via a SYSTEM scheduled task) and
+        <strong>Linux</strong> (via a systemd --user service + xdotool/wtype).
+      </p>
+    </section>
+
+    <section>
+      <h2>How it works</h2>
+      <div class="diagram">
+ ┌──────────────┐      tap       ┌────────────┐   PC/SC (pyscard)   ┌──────────────────┐
+ │ Phone w/ NFC  │ ──────────────▶│  ACR122U   │ ───────────────────▶│ nfc-unlock-pc     │
+ │ tag / sticker │                │  USB reader│                     │ background service│
+ └──────────────┘                └────────────┘                     └─────────┬─────────┘
+                                                                                │ UID matches enrolled tag?
+                                                                                ▼
+                                                                  ┌─────────────────────────┐
+                                                                  │ SendInput → Winlogon      │
+                                                                  │ (types password + Enter) │
+                                                                  └─────────────────────────┘
+      </div>
+      <p>
+        The ACR122U appears to Windows as a normal PC/SC smart-card reader, so the
+        service talks to it with the <code>pyscard</code> Python library and reads
+        each tag's UID via the standard <code>FF CA 00 00 00</code> "Get UID" command.
+        Because the Windows lock screen runs on an isolated secure desktop, the
+        service runs as <strong>SYSTEM</strong> (via a Scheduled Task) so it can attach
+        to that desktop and inject the keystrokes.
+      </p>
+    </section>
+
+    <section>
+      <h2>Get started</h2>
+      <ol class="steps">
+        <li>Plug in your ACR122U and install the official ACS driver.</li>
+        <li>Stick an NFC tag (NTAG213/215) on your phone.</li>
+        <li><code>pip install -r requirements.txt</code></li>
+        <li><code>python src\main.py enroll</code> — tap your phone, enter your Windows password once.</li>
+        <li>Run <code>scripts\install_task.ps1</code> as Administrator to install the background service.</li>
+        <li>Lock your PC, tap your phone — done.</li>
+      </ol>
+      <p>Full setup instructions, troubleshooting and security notes are in the <a href="https://github.com/">project README</a>.</p>
+    </section>
+
+    <section>
+      <h2>Project layout</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>reader.py</h3>
+          <p>Talks to the ACR122U via PC/SC (<code>pyscard</code>), polls for tag UIDs.</p>
+        </div>
+        <div class="card">
+          <h3>config.py</h3>
+          <p>Stores the enrolled tag UID and a DPAPI-encrypted Windows password.</p>
+        </div>
+        <div class="card">
+          <h3>enroll.py</h3>
+          <p>One-time wizard: scan your tag, save your credentials securely.</p>
+        </div>
+        <div class="card">
+          <h3>unlocker.py</h3>
+          <p>Attaches to the Winlogon secure desktop and types your credentials via <code>SendInput</code>.</p>
+        </div>
+        <div class="card">
+          <h3>service.py</h3>
+          <p>The main loop — watches the reader and triggers the unlock.</p>
+        </div>
+        <div class="card">
+          <h3>install_task.ps1</h3>
+          <p>Registers the service as a SYSTEM scheduled task that survives the lock screen.</p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Security notes</h2>
+      <p>
+        This is a <strong>convenience</strong> tool, not a high-assurance authentication
+        system — anyone holding an enrolled (or cloned) tag can unlock the PC. Your
+        password is encrypted with DPAPI and tied to this machine, but is still
+        decryptable by SYSTEM/admin. If you want a polished, security-audited
+        commercial alternative with native ACR122U + MIFARE support, see
+        <a href="https://rohos.com/">Rohos Logon Key</a>.
+      </p>
+    </section>
+  </main>
+
+  <footer>
+    NFC Unlock PC · MIT License · Built for the ACR122U + a phone-mounted NFC sticker
+  </footer>
+</body>
+</html>
