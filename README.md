@@ -151,13 +151,20 @@ physical-tag route instead.
 ### 2. Enroll
 
 ```bash
-python src/main.py enroll
+python src/main.py setup
 ```
 
-Open the companion app and hold the phone against the reader (or place your
-tag). The wizard reads its identifier automatically. You'll then be asked for
-an account password — **this is optional**: leave it blank if you're setting
-up Linux Tier 1 (PAM-only), since nothing will ever type it.
+This opens a setup wizard in your browser (served locally, never exposed off
+your machine): it lists every PC/SC reader it finds (any ACR122U-compatible
+reader works, not just that exact model) so you can pick the one you plugged
+in, then asks you to tap the device you want to unlock with. Tap your phone
+(with the companion app open) or your tag — once detected, confirm "yes,
+this is the one" and it's registered. An account password is **optional**:
+leave it blank if you're setting up Linux Tier 1 (PAM-only), since nothing
+will ever type it.
+
+(There's also a CLI version, `python src/main.py enroll`, that asks the same
+questions in the terminal if you'd rather not use a browser.)
 
 ### 3a. Linux — Tier 1, no typing (recommended)
 
