@@ -23,7 +23,7 @@ KEYRING_SERVICE = "nfc-unlock-pc"
 KEYRING_USERNAME = "login-password"
 
 DEFAULT_CONFIG = {
-    "uid": None,            # UID of the enrolled NFC tag (hex string)
+    "uid": None,            # enrolled identifier (hex string): physical tag UID or phone HCE token
     "username": None,       # account username to type at the lock screen (Windows; unused on Linux)
     "password_stored": False,
 }
