@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">NFC Unlock Companion</string>
+    <string name="hce_service_description">NFC Unlock PC token</string>
+    <string name="hce_aid_group_description">PC unlock token</string>
+
+    <string name="token_label">Your unlock token</string>
+    <string name="token_explainer">Run \"python src/main.py enroll\" on your PC, then hold the
+back of this phone against the NFC reader while this app is open (or with the
+screen on - HCE works in the background once the app has been opened once).
+The token below is what the reader will see.</string>
+    <string name="regenerate_button">Generate new token</string>
+    <string name="regenerate_warning">Generating a new token invalidates the old one - you\'ll
+need to re-run enrollment on the PC afterwards.</string>
+    <string name="copied_toast">Token copied to clipboard</string>
+</resources>
