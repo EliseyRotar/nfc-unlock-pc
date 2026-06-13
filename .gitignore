@@ -3,3 +3,12 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+
+# Android (android-hce-app/)
+android-hce-app/.gradle/
+android-hce-app/build/
+android-hce-app/app/build/
+android-hce-app/local.properties
+android-hce-app/.idea/
+android-hce-app/*.iml
+android-hce-app/app/*.iml
