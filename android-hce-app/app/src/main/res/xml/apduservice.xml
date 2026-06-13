@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  AID-to-category mapping for the nfc-unlock-pc HCE service.
+
+  F0AC1DC0DE0001 is in the "unregistered" ISO 7816-5 AID range (proprietary
+  AIDs start with F0-FE), so it does not collide with any payment/transit
+  AID. This MUST match HCE_AID_HEX in src/nfc_unlock/reader.py.
+-->
+<host-apdu-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:apduServiceBanner="@android:drawable/sym_def_app_icon"
+    android:description="@string/hce_service_description"
+    android:requireDeviceUnlock="false">
+    <aid-group
+        android:category="other"
+        android:description="@string/hce_aid_group_description">
+        <aid-filter android:name="F0AC1DC0DE0001" />
+    </aid-group>
+</host-apdu-service>
