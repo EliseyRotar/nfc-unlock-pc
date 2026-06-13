@@ -3,13 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NFC Unlock PC — tap your phone to unlock Windows</title>
+  <title>NFC Unlock PC — tap your phone to unlock Windows or Linux</title>
   <style>
     :root {
       --bg: #0d1117;
       --panel: #161b22;
       --accent: #58a6ff;
       --accent2: #3fb950;
+      --accent3: #d29922;
       --text: #c9d1d9;
       --muted: #8b949e;
     }
@@ -34,12 +35,13 @@
     header p {
       color: var(--muted);
       font-size: 1.15rem;
-      max-width: 640px;
+      max-width: 680px;
       margin: 0 auto;
     }
+    .badges { margin-top: 1.2rem; }
     .badge {
       display: inline-block;
-      margin-top: 1.2rem;
+      margin: 0.2rem;
       padding: 0.4rem 1rem;
       border-radius: 999px;
       background: rgba(63, 185, 80, 0.15);
@@ -47,8 +49,13 @@
       font-size: 0.85rem;
       border: 1px solid rgba(63, 185, 80, 0.4);
     }
+    .badge.warn {
+      background: rgba(210, 153, 34, 0.12);
+      color: var(--accent3);
+      border-color: rgba(210, 153, 34, 0.4);
+    }
     main {
-      max-width: 860px;
+      max-width: 900px;
       margin: 0 auto;
       padding: 0 1.5rem 4rem;
     }
@@ -59,19 +66,34 @@
       padding: 1.5rem;
       overflow-x: auto;
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: 0.85rem;
+      font-size: 0.78rem;
       color: var(--muted);
       margin: 2rem 0;
       white-space: pre;
     }
-    section {
-      margin: 2.5rem 0;
-    }
+    section { margin: 2.5rem 0; }
     h2 {
       color: #fff;
       border-bottom: 1px solid #30363d;
       padding-bottom: 0.5rem;
     }
+    h3.tier {
+      color: #fff;
+      margin-bottom: 0.3rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+      font-size: 0.95rem;
+    }
+    th, td {
+      border: 1px solid #30363d;
+      padding: 0.6rem 0.8rem;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { background: var(--panel); color: #fff; }
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -89,6 +111,15 @@
       color: var(--accent);
       font-size: 1.05rem;
     }
+    .tier-block {
+      background: var(--panel);
+      border: 1px solid #30363d;
+      border-left: 4px solid var(--accent2);
+      border-radius: 8px;
+      padding: 1.2rem 1.4rem;
+      margin: 1rem 0;
+    }
+    .tier-block.tier2 { border-left-color: var(--accent); }
     code, pre {
       background: #1f242c;
       border-radius: 6px;
@@ -96,11 +127,7 @@
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
       font-size: 0.9em;
     }
-    pre {
-      display: block;
-      padding: 1rem;
-      overflow-x: auto;
-    }
+    pre { display: block; padding: 1rem; overflow-x: auto; }
     a { color: var(--accent); text-decoration: none; }
     a:hover { text-decoration: underline; }
     footer {
@@ -139,60 +166,115 @@
 </head>
 <body>
   <header>
-    <h1>📲 NFC Unlock PC</h1>
-    <p>Tap your phone on a USB ACR122U reader and your Windows PC unlocks itself — no app, just a sticker.</p>
-    <span class="badge">MIT Licensed · Python · Windows 10/11 &amp; Linux</span>
+    <h1>NFC Unlock PC</h1>
+    <p>Tap your phone on a USB ACR122U reader and your PC unlocks — Windows or Linux,
+       no sticker required. On Linux it can unlock without ever typing a password.</p>
+    <div class="badges">
+      <span class="badge">MIT Licensed</span>
+      <span class="badge">Python</span>
+      <span class="badge">Windows 10/11 &amp; Linux</span>
+      <span class="badge warn">Convenience tool, not FIDO2</span>
+    </div>
   </header>
 
   <main>
     <section>
       <h2>What it does</h2>
       <p>
-        Stick a cheap NFC tag (NTAG213/215) on the back of your phone. When you tap
-        your phone on a connected <strong>ACR122U USB NFC reader</strong>, a small
-        background service running on your PC recognises the tag's unique ID,
-        retrieves your stored password from the OS keyring, and types it into the
-        lock screen for you — instantly unlocking your session. Works on both
-        <strong>Windows</strong> (via a SYSTEM scheduled task) and
-        <strong>Linux</strong> (via a systemd --user service + xdotool/wtype).
+        Every phone made in the last decade has an NFC radio capable of <em>Host Card
+        Emulation</em> (HCE) — acting as a card, not just reading one. The
+        <a href="https://github.com/EliseyRotar/nfc-unlock-pc/tree/master/android-hce-app">companion
+        Android app</a> uses that to make your phone answer a USB
+        <strong>ACR122U NFC reader</strong> with a private 16-byte token, generated once
+        on-device. No sticker, no extra hardware — your phone is the credential.
+      </p>
+      <p>
+        A small background process on your PC watches the reader. When it sees your
+        enrolled token (or a physical NTAG/MIFARE tag, if you'd rather use one), it
+        unlocks your session — using whichever of the two tiers below is available
+        on your OS.
       </p>
     </section>
 
     <section>
-      <h2>How it works</h2>
+      <h2>Two tiers of unlock</h2>
+
+      <div class="tier-block">
+        <h3 class="tier">Tier 1 — Linux, PAM: no password ever typed</h3>
+        <p>
+          <code>scripts/setup_pam_linux.sh &lt;service&gt;</code> adds one line to
+          <code>/etc/pam.d/&lt;service&gt;</code>:
+          <code>auth sufficient pam_exec.so quiet python scripts/pam_nfc_check.py</code>.
+          PAM runs that script, which exits <code>0</code> if your enrolled phone is on
+          the reader (within 5s) — and PAM treats that as a <strong>successful login</strong>,
+          no password prompt at all. If it exits non-zero, PAM falls straight through to
+          your normal password check, completely unchanged. You cannot be locked out by
+          this: worst case it behaves exactly as if it were never installed.
+        </p>
+        <p>
+          This is the same external-helper pattern used by
+          <a href="https://github.com/jpetazzo/sirfidal">SiRFIDaL</a> and
+          <code>pam_nfc</code> — proven prior art, not a novel hack.
+        </p>
+      </div>
+
+      <div class="tier-block tier2">
+        <h3 class="tier">Tier 2 — typed password (Linux fallback, or Windows)</h3>
+        <p>
+          Your account password lives in your OS's secure credential store
+          (<a href="https://pypi.org/project/keyring/">keyring</a> — Windows Credential
+          Manager / Linux Secret Service / KWallet), never in plaintext. On tap, it's
+          typed into the lock screen for you.
+        </p>
+        <p>
+          <strong>Windows</strong> runs the service as <strong>SYSTEM</strong> via a
+          Scheduled Task so it can attach to the isolated Winlogon secure desktop and
+          call <code>SendInput</code> — ordinary processes can't do this, which is also
+          why Windows has no Tier-1 equivalent yet (see Roadmap).
+          <strong>Linux</strong> runs a normal <code>systemd --user</code> service using
+          <code>xdotool</code> (X11) or <code>wtype</code> (Wayland), since lockers run
+          inside your own session.
+        </p>
+      </div>
+    </section>
+
+    <section>
+      <h2>How identification works</h2>
       <div class="diagram">
- ┌──────────────┐      tap       ┌────────────┐   PC/SC (pyscard)   ┌──────────────────┐
- │ Phone w/ NFC  │ ──────────────▶│  ACR122U   │ ───────────────────▶│ nfc-unlock-pc     │
- │ tag / sticker │                │  USB reader│                     │ background service│
- └──────────────┘                └────────────┘                     └─────────┬─────────┘
-                                                                                │ UID matches enrolled tag?
-                                                                                ▼
-                                                                  ┌─────────────────────────┐
-                                                                  │ SendInput → Winlogon      │
-                                                                  │ (types password + Enter) │
-                                                                  └─────────────────────────┘
+ ┌──────────────────────┐        tap         ┌────────────┐   PC/SC (pyscard)   ┌────────────────────┐
+ │ Phone: HCE companion  │ ──────────────────▶│  ACR122U   │ ───────────────────▶│ reader.py           │
+ │ app  (or NTAG sticker)│  SELECT AID         │  USB reader│   get_identifier()  │ get_identifier()    │
+ │                       │  F0AC1DC0DE0001     └────────────┘                     └─────────┬──────────┘
+ └──────────────────────┘                                                                   │ == enrolled?
+                                                              ┌──────────────────────────────┴───────────────────────────┐
+                                                              ▼                                                            ▼
+                                                   Linux: pam_nfc_check.py exit 0                          Linux Tier 2 / Windows:
+                                                   → PAM accepts, locker unlocks                           type stored password + Enter
+                                                   (nothing typed)
       </div>
       <p>
-        The ACR122U appears to Windows as a normal PC/SC smart-card reader, so the
-        service talks to it with the <code>pyscard</code> Python library and reads
-        each tag's UID via the standard <code>FF CA 00 00 00</code> "Get UID" command.
-        Because the Windows lock screen runs on an isolated secure desktop, the
-        service runs as <strong>SYSTEM</strong> (via a Scheduled Task) so it can attach
-        to that desktop and inject the keystrokes.
+        Physical tags answer <code>FF CA 00 00 00</code> with their UID. Phones running
+        the HCE app don't have a stable UID (Android randomizes it per-tap for privacy),
+        so the app instead registers AID <code>F0AC1DC0DE0001</code> and answers
+        <code>SELECT</code> with a fixed token generated on first launch.
+        <code>reader.get_identifier()</code> tries a UID read first, then that AID —
+        so enrollment and unlock code don't care which kind of "tag" you're using.
       </p>
     </section>
 
     <section>
       <h2>Get started</h2>
       <ol class="steps">
-        <li>Plug in your ACR122U and install the official ACS driver.</li>
-        <li>Stick an NFC tag (NTAG213/215) on your phone.</li>
-        <li><code>pip install -r requirements.txt</code></li>
-        <li><code>python src\main.py enroll</code> — tap your phone, enter your Windows password once.</li>
-        <li>Run <code>scripts\install_task.ps1</code> as Administrator to install the background service.</li>
+        <li>Plug in the ACR122U (install the official ACS driver on Windows).</li>
+        <li><code>git clone https://github.com/EliseyRotar/nfc-unlock-pc.git &amp;&amp; cd nfc-unlock-pc &amp;&amp; python install.py</code></li>
+        <li>Build <code>android-hce-app/</code> in Android Studio and install it on your phone (or write an NTAG sticker instead).</li>
+        <li><code>python src/main.py enroll</code> — tap your phone, optionally store your password.</li>
+        <li><strong>Linux:</strong> <code>sudo bash scripts/setup_pam_linux.sh &lt;pam-service&gt;</code> for Tier 1 (recommended), or <code>bash scripts/install_service_linux.sh</code> for Tier 2.<br>
+            <strong>Windows:</strong> <code>scripts\install_task.ps1</code> as Administrator.</li>
         <li>Lock your PC, tap your phone — done.</li>
       </ol>
-      <p>Full setup instructions, troubleshooting and security notes are in the <a href="https://github.com/">project README</a>.</p>
+      <p>Full setup instructions, troubleshooting and security notes are in the
+        <a href="https://github.com/EliseyRotar/nfc-unlock-pc#readme">project README</a>.</p>
     </section>
 
     <section>
@@ -200,27 +282,27 @@
       <div class="grid">
         <div class="card">
           <h3>reader.py</h3>
-          <p>Talks to the ACR122U via PC/SC (<code>pyscard</code>), polls for tag UIDs.</p>
+          <p>Talks to the ACR122U via PC/SC (<code>pyscard</code>). <code>get_identifier()</code> reads a physical tag's UID or a phone's HCE token (AID <code>F0AC1DC0DE0001</code>).</p>
+        </div>
+        <div class="card">
+          <h3>android-hce-app/</h3>
+          <p>Minimal HCE app: generates a token on first launch, answers the AID SELECT with it. That's the whole app.</p>
+        </div>
+        <div class="card">
+          <h3>pam_nfc_check.py + setup_pam_linux.sh</h3>
+          <p>Tier 1: the PAM helper and the script that wires it into <code>/etc/pam.d/&lt;service&gt;</code> as <code>sufficient</code>.</p>
         </div>
         <div class="card">
           <h3>config.py</h3>
-          <p>Stores the enrolled tag UID and a DPAPI-encrypted Windows password.</p>
+          <p>Stores the enrolled identifier in <code>config.json</code>; password (optional) goes through <code>keyring</code> into the OS credential store.</p>
         </div>
         <div class="card">
           <h3>enroll.py</h3>
-          <p>One-time wizard: scan your tag, save your credentials securely.</p>
+          <p>One-time wizard: tap phone/tag, optionally save a password, prints the right next command for your OS.</p>
         </div>
         <div class="card">
-          <h3>unlocker.py</h3>
-          <p>Attaches to the Winlogon secure desktop and types your credentials via <code>SendInput</code>.</p>
-        </div>
-        <div class="card">
-          <h3>service.py</h3>
-          <p>The main loop — watches the reader and triggers the unlock.</p>
-        </div>
-        <div class="card">
-          <h3>install_task.ps1</h3>
-          <p>Registers the service as a SYSTEM scheduled task that survives the lock screen.</p>
+          <h3>unlocker_windows.py / unlocker_linux.py</h3>
+          <p>Tier 2 typing backends — <code>SendInput</code> to Winlogon on Windows, <code>xdotool</code>/<code>wtype</code> on Linux.</p>
         </div>
       </div>
     </section>
@@ -228,18 +310,36 @@
     <section>
       <h2>Security notes</h2>
       <p>
-        This is a <strong>convenience</strong> tool, not a high-assurance authentication
-        system — anyone holding an enrolled (or cloned) tag can unlock the PC. Your
-        password is encrypted with DPAPI and tied to this machine, but is still
-        decryptable by SYSTEM/admin. If you want a polished, security-audited
-        commercial alternative with native ACR122U + MIFARE support, see
-        <a href="https://rohos.com/">Rohos Logon Key</a>.
+        This is a <strong>convenience</strong> tool, not a certified authentication system —
+        anyone who presents an enrolled phone/tag to the reader can unlock your session,
+        the same threat model as a physical access card. The HCE token is a 16-byte
+        random value tied to the phone (not a cloneable UID), making it the strongest
+        identifier this project supports. Tier 1's PAM line is <code>sufficient</code>
+        and inserted first — if the check ever fails or the reader is unplugged, your
+        normal password prompt appears exactly as before. Tier 2 passwords sit in your
+        OS's secure credential store, with the same exposure as any saved
+        Windows/browser credential.
+      </p>
+    </section>
+
+    <section>
+      <h2>Roadmap: Windows without typing</h2>
+      <p>
+        A true Tier-1 equivalent on Windows means a custom <strong>Credential
+        Provider</strong> (<code>ICredentialProvider</code> COM interfaces) — the same
+        plug-in point Windows Hello and smart-card logon use. Research for this project
+        found no actively-maintained open-source reference implementation for an
+        NFC-based Credential Provider; <a href="https://rohos.com/">Rohos Logon Key</a>
+        is the closest commercial equivalent. Building one is a real COM/C++ project and
+        is tracked as future work, not promised functionality — Windows currently uses
+        Tier 2 (typed password via SYSTEM + Winlogon) only.
       </p>
     </section>
   </main>
 
   <footer>
-    NFC Unlock PC · MIT License · Built for the ACR122U + a phone-mounted NFC sticker
+    NFC Unlock PC · MIT License · ACR122U + your phone's NFC (HCE) ·
+    Tier-1 design inspired by <a href="https://github.com/jpetazzo/sirfidal">SiRFIDaL</a> and pam_nfc
   </footer>
 </body>
 </html>
