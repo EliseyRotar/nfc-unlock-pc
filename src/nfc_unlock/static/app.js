@@ -170,23 +170,66 @@ function renderNextSteps(next) {
     actionRow.classList.remove("hidden");
     actionBtn.textContent = "Install the background unlock task";
     actionBtn.onclick = async () => {
-      actionStatus.textContent = "Asking Windows to install the task (approve the permission prompt)...";
+      actionBtn.disabled = true;
+      actionStatus.textContent = "Asking Windows to install the task - look for a permission " +
+        "prompt (UAC) and click Yes...";
       try {
         const res = await fetch("/api/install_unlock_task", { method: "POST" });
         const data = await res.json();
         if (data.error) {
           actionStatus.textContent = "Error: " + data.error;
-        } else {
-          actionStatus.textContent = "Done. The 'NFCUnlockPC' task is installed and will " +
-            "run at boot. Tap your phone at the lock screen to try it.";
+          actionBtn.disabled = false;
+          return;
         }
+        await pollTaskStatus(actionStatus, actionBtn);
       } catch (e) {
         actionStatus.textContent = "Error: " + e;
+        actionBtn.disabled = false;
       }
     };
+    // If the task is already installed (e.g. re-running setup), say so up front.
+    checkTaskStatus(actionStatus);
   } else {
     actionRow.classList.add("hidden");
   }
+}
+
+async function checkTaskStatus(statusEl) {
+  try {
+    const res = await fetch("/api/task_status");
+    const data = await res.json();
+    if (data.installed) {
+      statusEl.textContent = `Already installed (state: ${data.state}). Tap your phone at ` +
+        "the lock screen to try it, or click the button again to reinstall.";
+    }
+  } catch (e) {
+    // ignore - not critical
+  }
+}
+
+// Poll /api/task_status for up to ~60s after the user approves the UAC prompt,
+// since the install runs asynchronously and the backend can't wait on it.
+async function pollTaskStatus(statusEl, btn) {
+  const deadline = Date.now() + 60000;
+  while (Date.now() < deadline) {
+    await new Promise((r) => setTimeout(r, 2000));
+    try {
+      const res = await fetch("/api/task_status");
+      const data = await res.json();
+      if (data.installed) {
+        statusEl.textContent = `Done - the 'NFCUnlockPC' task is registered (state: ${data.state}) ` +
+          "and will run at boot. Tap your phone at the lock screen to try it.";
+        btn.disabled = false;
+        return;
+      }
+    } catch (e) {
+      // transient - keep polling
+    }
+  }
+  statusEl.textContent = "Still not detected after 60s. If you saw and approved the " +
+    "permission prompt, click the button again - otherwise run the command below " +
+    "from an Administrator PowerShell.";
+  btn.disabled = false;
 }
 
 document.getElementById("btn-refresh-readers").addEventListener("click", loadReaders);
