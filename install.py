@@ -116,8 +116,11 @@ def install_windows():
 
     print()
     print("Next steps:")
-    print("  1. Install the official ACS ACR122U driver:")
-    print("     https://www.acs.com.hk/en/driver/3/acr122u-usb-nfc-reader/")
+    print("  1. Plug in your NFC reader. Most (including the ACR122U) work with")
+    print("     Windows' built-in driver automatically - if 'setup' below doesn't")
+    print("     see it, the wizard's first step offers to let Windows fetch a")
+    print("     driver for it (or get the official ACS driver manually:")
+    print("     https://www.acs.com.hk/en/driver/3/acr122u-usb-nfc-reader/)")
     print("  2. python src\\main.py setup   (opens a setup wizard in your browser; use .venv\\Scripts\\python.exe if one was created above)")
     print("  3. Run scripts\\install_task.ps1 from an elevated PowerShell")
 
