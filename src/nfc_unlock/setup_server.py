@@ -10,8 +10,10 @@ Nothing here is exposed beyond localhost, and the server exits once setup
 is finished (or you close the tab and press Ctrl+C).
 """
 
+import json
 import os
 import platform
+import subprocess
 import threading
 import time
 import webbrowser
@@ -22,6 +24,12 @@ from . import config, reader
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(HERE, "static")
+PROJECT_ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
+
+# Common USB vendor IDs for PC/SC NFC / smart-card readers, used only to
+# recognize a plugged-in-but-driverless reader so we can offer to fix it.
+# ACS (ACR122U, ACR1252U, ...) = 072F, Identiv = 046A, SCM Micro = 04E6.
+KNOWN_READER_VIDS = ["VID_072F", "VID_046A", "VID_04E6"]
 
 app = Flask(__name__, static_folder=STATIC_DIR, static_url_path="")
 
@@ -61,6 +69,77 @@ def api_scan():
         return jsonify({"identifier": ident})
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/api/driver_status")
+def api_driver_status():
+    """
+    Best-effort check: do we already have a working PC/SC reader? If not (on
+    Windows), is there a plugged-in NFC/smart-card-looking USB device that
+    Windows hasn't matched a driver to yet?
+
+    This drives the "Step 0" of the wizard - most users on a modern Windows
+    install need nothing here (the inbox CCID driver already handles the
+    ACR122U), so this step is skipped entirely when a reader is already
+    visible to pyscard.
+    """
+    try:
+        rs = reader.list_readers()
+    except Exception:
+        rs = []
+
+    result = {"readers_found": len(rs), "system": platform.system(), "candidates": []}
+    if rs or platform.system() != "Windows":
+        return jsonify(result)
+
+    # No PC/SC reader yet - look for a plugged-in device that looks like an
+    # NFC/smart-card reader but has no working driver (Device Manager
+    # "problem" status), via PowerShell's Get-PnpDevice.
+    try:
+        ps_cmd = (
+            "Get-PnpDevice | Where-Object { "
+            "$_.InstanceId -match 'VID_(072F|046A|04E6)' -or "
+            "$_.FriendlyName -match 'ACR1|ACR3|NFC|PC/SC|PCSC|Smart ?Card|Contactless' "
+            "} | Select-Object FriendlyName, Status, Class, InstanceId | ConvertTo-Json -Compress"
+        )
+        out = subprocess.run(
+            ["powershell", "-NoProfile", "-Command", ps_cmd],
+            capture_output=True, text=True, timeout=20, check=False,
+        ).stdout.strip()
+        if out:
+            devices = json.loads(out)
+            if isinstance(devices, dict):
+                devices = [devices]
+            result["candidates"] = [
+                d for d in devices if d.get("Status") != "OK"
+            ]
+    except Exception as exc:
+        result["error"] = str(exc)
+
+    return jsonify(result)
+
+
+@app.route("/api/install_driver", methods=["POST"])
+def api_install_driver():
+    """
+    Windows only: launch scripts/install_driver_windows.ps1 elevated (UAC
+    prompt) to make Windows re-scan for hardware changes and fetch a driver
+    for the reader from Windows Update / its driver store.
+    """
+    if platform.system() != "Windows":
+        return jsonify({"error": "Not supported on this platform"}), 400
+
+    script = os.path.join(PROJECT_ROOT, "scripts", "install_driver_windows.ps1")
+    try:
+        subprocess.Popen([
+            "powershell", "-NoProfile", "-Command",
+            f"Start-Process powershell -Verb RunAs -ArgumentList "
+            f"'-NoProfile -ExecutionPolicy Bypass -File \"{script}\"' -Wait",
+        ])
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+    return jsonify({"ok": True})
 
 
 @app.route("/api/platform")
