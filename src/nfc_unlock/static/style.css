@@ -48,6 +48,10 @@ h2 {
   display: block;
 }
 
+.hidden {
+  display: none;
+}
+
 .hint {
   color: var(--muted);
 }
