@@ -119,6 +119,18 @@ def api_driver_status():
     return jsonify(result)
 
 
+def _run_elevated_ps1(script_path):
+    """
+    Launch a .ps1 elevated via Start-Process -Verb RunAs (triggers a UAC
+    consent prompt) and wait for it to finish.
+    """
+    subprocess.Popen([
+        "powershell", "-NoProfile", "-Command",
+        f"Start-Process powershell -Verb RunAs -ArgumentList "
+        f"'-NoProfile -ExecutionPolicy Bypass -File \"{script_path}\"' -Wait",
+    ])
+
+
 @app.route("/api/install_driver", methods=["POST"])
 def api_install_driver():
     """
@@ -131,11 +143,34 @@ def api_install_driver():
 
     script = os.path.join(PROJECT_ROOT, "scripts", "install_driver_windows.ps1")
     try:
-        subprocess.Popen([
-            "powershell", "-NoProfile", "-Command",
-            f"Start-Process powershell -Verb RunAs -ArgumentList "
-            f"'-NoProfile -ExecutionPolicy Bypass -File \"{script}\"' -Wait",
-        ])
+        _run_elevated_ps1(script)
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+    return jsonify({"ok": True})
+
+
+@app.route("/api/install_unlock_task", methods=["POST"])
+def api_install_unlock_task():
+    """
+    Windows only: launch scripts/install_task.ps1 elevated (UAC prompt) to
+    register the NFCUnlockPC scheduled task - the Tier 2 'final step' that
+    previously had to be run manually from an Administrator PowerShell.
+    """
+    if platform.system() != "Windows":
+        return jsonify({"error": "Not supported on this platform"}), 400
+
+    cfg = config.load_config()
+    if not cfg.get("password_stored"):
+        return jsonify({
+            "error": "No password was stored during enrollment, so there's "
+                     "nothing for the unlock task to type. Re-run setup and "
+                     "enter your account password in Step 4."
+        }), 400
+
+    script = os.path.join(PROJECT_ROOT, "scripts", "install_task.ps1")
+    try:
+        _run_elevated_ps1(script)
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
 
@@ -189,12 +224,15 @@ def _next_steps(system, has_password):
         return {
             "tier": 2,
             "title": "Windows: install the background unlock task",
+            "action": "install_task_windows",
             "commands": [
                 r"cd scripts",
                 r"powershell -ExecutionPolicy Bypass -File .\install_task.ps1   # run as Administrator",
             ],
             "note": "Registers a SYSTEM scheduled task that types your stored "
-                    "password at the Winlogon lock screen when you tap.",
+                    "password at the Winlogon lock screen when you tap. Click "
+                    "the button below to do this automatically (you'll get a "
+                    "permission prompt) - or run the command yourself.",
         }
     if system == "Linux":
         return {
