@@ -138,8 +138,10 @@ python install.py
   `pcscd` service, then installs the Python requirements.
 - **Windows**: installs the Python requirements (falling back to a `.venv`
   with an older Python if your default Python has no prebuilt `pyscard`
-  wheel — see [Troubleshooting](#troubleshooting)) and reminds you to install
-  the official ACR122U driver.
+  wheel — see [Troubleshooting](#troubleshooting)). Most readers (including
+  the ACR122U) work with Windows' inbox CCID smart-card driver with zero
+  extra steps; if the setup wizard's first step doesn't see your reader, it
+  offers to let Windows search for a driver for it automatically (see below).
 - **macOS**: installs the Python requirements (PC/SC is built in).
 
 ### 1. Get the companion app on your phone
@@ -155,9 +157,15 @@ python src/main.py setup
 ```
 
 This opens a setup wizard in your browser (served locally, never exposed off
-your machine): it lists every PC/SC reader it finds (any ACR122U-compatible
-reader works, not just that exact model) so you can pick the one you plugged
-in, then asks you to tap the device you want to unlock with. Tap your phone
+your machine). First, on Windows, it checks whether your reader is already
+working - if not, and it spots a plugged-in NFC/smart-card device Windows
+hasn't matched a driver to yet, it offers a one-click "let Windows find a
+driver" (a permission-prompted re-scan against Windows Update/driver store -
+this is how the inbox CCID driver gets matched to the ACR122U and most other
+PC/SC readers, with no vendor download needed). Then it lists every PC/SC
+reader it finds (any ACR122U-compatible reader works, not just that exact
+model) so you can pick the one you plugged in, then asks you to tap the
+device you want to unlock with. Tap your phone
 (with the companion app open) or your tag — once detected, confirm "yes,
 this is the one" and it's registered. An account password is **optional**:
 leave it blank if you're setting up Linux Tier 1 (PAM-only), since nothing
@@ -224,6 +232,7 @@ nfc-unlock-pc/
 ├── scripts/
 │   ├── install_task.ps1            Windows: register SYSTEM scheduled task (Tier 2)
 │   ├── uninstall_task.ps1           Windows: remove it
+│   ├── install_driver_windows.ps1   Windows: re-scan for hardware changes to fetch a reader driver
 │   ├── install_service_linux.sh     Linux: register systemd --user service (Tier 2)
 │   ├── pam_nfc_check.py             Linux Tier 1: PAM helper (exit 0/1 based on tap)
 │   └── setup_pam_linux.sh           Linux Tier 1: wires pam_nfc_check.py into /etc/pam.d/<service>
@@ -282,7 +291,7 @@ nfc-unlock-pc/
 
 | Symptom | Fix |
 |---|---|
-| `No PC/SC readers found` | **Windows**: install the ACS driver, check Device Manager, restart the Smart Card service. **Linux**: `sudo systemctl status pcscd`, run `pcsc_scan` to confirm the reader is seen. |
+| `No PC/SC readers found` | **Windows**: run `python src/main.py setup` - its first step detects a driverless reader and offers to let Windows fetch a driver for it (`scripts/install_driver_windows.ps1`, runs `pnputil /scan-devices` elevated). If that doesn't help, check Device Manager and restart the "Smart Card" service, or install the ACS driver manually: https://www.acs.com.hk/en/driver/3/acr122u-usb-nfc-reader/. **Linux**: `sudo systemctl status pcscd`, run `pcsc_scan` to confirm the reader is seen. |
 | Reader detected but nothing matches | For tags: make sure it's ISO14443-A/MIFARE/NTAG, hold flat for ~1s. For phones: open the companion app first (HCE services often need to have been launched at least once), hold flat against the reader's antenna (usually centered under the ACR122U logo). |
 | `pip install -r requirements.txt` fails building `pyscard` on Windows (`Microsoft Visual C++ 14.0 or greater is required`) | Your default Python is too new for prebuilt `pyscard` wheels (cp314+). `python install.py` auto-detects this and creates a `.venv` with an older Python (3.9–3.13) via the `py` launcher — install one from python.org if none is found. |
 | Linux Tier 1: tapping doesn't bypass the password prompt | Confirm `<pam-service>` matches what your locker actually uses (`ls /etc/pam.d/`), check the inserted line in `/etc/pam.d/<service>` is the *first* `auth` line, and test `pam_nfc_check.py` manually: `python scripts/pam_nfc_check.py; echo $?` while tapping. |
