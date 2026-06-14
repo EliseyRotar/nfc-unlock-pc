@@ -5,13 +5,56 @@ let selectedReaderIndex = null;
 let scanTimer = null;
 let detectedIdentifier = null;
 
-const steps = ["step-reader", "step-tap", "step-confirm", "step-credentials", "step-done"];
+const steps = ["step-driver", "step-reader", "step-tap", "step-confirm", "step-credentials", "step-done"];
 
 function showStep(id) {
   for (const s of steps) {
     document.getElementById(s).classList.toggle("active", s === id);
   }
 }
+
+async function checkDriver() {
+  try {
+    const res = await fetch("/api/driver_status");
+    const data = await res.json();
+    if (data.readers_found > 0 || data.system !== "Windows") {
+      showStep("step-reader");
+      loadReaders();
+      return;
+    }
+    if (data.candidates && data.candidates.length > 0) {
+      document.getElementById("driver-checking").classList.add("hidden");
+      document.getElementById("driver-problem").classList.remove("hidden");
+      document.getElementById("driver-device-name").textContent =
+        data.candidates.map((d) => `${d.FriendlyName} (${d.Status})`).join(", ");
+      return;
+    }
+    // No reader visible and nothing obviously wrong - just go to the
+    // reader-select step, which will show "no readers found".
+    showStep("step-reader");
+    loadReaders();
+  } catch (e) {
+    showStep("step-reader");
+    loadReaders();
+  }
+}
+
+document.getElementById("btn-install-driver").addEventListener("click", async () => {
+  const status = document.getElementById("driver-install-status");
+  status.textContent = "Asking Windows to search for a driver (approve the permission prompt)...";
+  try {
+    await fetch("/api/install_driver", { method: "POST" });
+    status.textContent = "Done. Checking again...";
+    setTimeout(checkDriver, 4000);
+  } catch (e) {
+    status.textContent = "Error: " + e;
+  }
+});
+
+document.getElementById("btn-skip-driver").addEventListener("click", () => {
+  showStep("step-reader");
+  loadReaders();
+});
 
 async function loadReaders() {
   const list = document.getElementById("reader-list");
@@ -124,4 +167,4 @@ document.getElementById("btn-confirm-yes").addEventListener("click", () => showS
 document.getElementById("btn-confirm-no").addEventListener("click", rescan);
 document.getElementById("btn-save").addEventListener("click", saveEnrollment);
 
-loadReaders();
+checkDriver();
