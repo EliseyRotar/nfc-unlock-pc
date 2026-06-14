@@ -156,6 +156,11 @@ def api_install_unlock_task():
     Windows only: launch scripts/install_task.ps1 elevated (UAC prompt) to
     register the NFCUnlockPC scheduled task - the Tier 2 'final step' that
     previously had to be run manually from an Administrator PowerShell.
+
+    This only LAUNCHES the elevated installer and returns immediately - it
+    does NOT mean the task is installed yet (the user still has to approve
+    the UAC prompt). The frontend must poll /api/task_status afterwards to
+    find out whether it actually succeeded.
     """
     if platform.system() != "Windows":
         return jsonify({"error": "Not supported on this platform"}), 400
@@ -174,7 +179,36 @@ def api_install_unlock_task():
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
 
-    return jsonify({"ok": True})
+    return jsonify({"ok": True, "launched": True})
+
+
+@app.route("/api/task_status")
+def api_task_status():
+    """
+    Windows only: report whether the 'NFCUnlockPC' SYSTEM scheduled task is
+    actually registered (and its current State). This is the source of
+    truth the frontend polls after clicking "Install the background unlock
+    task", since the install itself runs through an async UAC prompt that
+    the backend can't wait on directly.
+    """
+    if platform.system() != "Windows":
+        return jsonify({"error": "Not supported on this platform"}), 400
+
+    try:
+        out = subprocess.run(
+            [
+                "powershell", "-NoProfile", "-Command",
+                "Get-ScheduledTask -TaskName 'NFCUnlockPC' -ErrorAction SilentlyContinue "
+                "| Select-Object TaskName,State | ConvertTo-Json -Compress",
+            ],
+            capture_output=True, text=True, timeout=15, check=False,
+        ).stdout.strip()
+        if not out:
+            return jsonify({"installed": False})
+        data = json.loads(out)
+        return jsonify({"installed": True, "state": data.get("State")})
+    except Exception as exc:
+        return jsonify({"installed": False, "error": str(exc)})
 
 
 @app.route("/api/platform")
