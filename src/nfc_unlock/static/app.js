@@ -160,6 +160,33 @@ function renderNextSteps(next) {
   }
 
   document.getElementById("done-note").textContent = next.note || "";
+
+  const actionRow = document.getElementById("done-action");
+  const actionBtn = document.getElementById("btn-done-action");
+  const actionStatus = document.getElementById("done-action-status");
+  actionStatus.textContent = "";
+
+  if (next.action === "install_task_windows") {
+    actionRow.classList.remove("hidden");
+    actionBtn.textContent = "Install the background unlock task";
+    actionBtn.onclick = async () => {
+      actionStatus.textContent = "Asking Windows to install the task (approve the permission prompt)...";
+      try {
+        const res = await fetch("/api/install_unlock_task", { method: "POST" });
+        const data = await res.json();
+        if (data.error) {
+          actionStatus.textContent = "Error: " + data.error;
+        } else {
+          actionStatus.textContent = "Done. The 'NFCUnlockPC' task is installed and will " +
+            "run at boot. Tap your phone at the lock screen to try it.";
+        }
+      } catch (e) {
+        actionStatus.textContent = "Error: " + e;
+      }
+    };
+  } else {
+    actionRow.classList.add("hidden");
+  }
 }
 
 document.getElementById("btn-refresh-readers").addEventListener("click", loadReaders);
