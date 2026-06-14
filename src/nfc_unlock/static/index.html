@@ -10,8 +10,29 @@
   <main>
     <h1>NFC Unlock PC - Setup</h1>
 
+    <!-- Step 0: driver check -->
+    <section id="step-driver" class="step active">
+      <h2>Checking your NFC reader...</h2>
+      <div id="driver-checking" class="tap-status">
+        <div class="spinner"></div>
+        <p>Looking for a working PC/SC reader.</p>
+      </div>
+      <div id="driver-problem" class="hidden">
+        <p class="hint">Windows hasn't matched a driver to this device yet:</p>
+        <p class="identifier" id="driver-device-name"></p>
+        <p class="hint">Most readers (including the ACR122U) work with Windows' built-in
+          smart-card driver - clicking below lets Windows search for it
+          (Windows Update / driver store). You'll get a permission prompt.</p>
+        <div class="row">
+          <button id="btn-install-driver" class="primary">Let Windows find a driver</button>
+          <button id="btn-skip-driver">Skip / I'll do it manually</button>
+        </div>
+        <p class="muted" id="driver-install-status"></p>
+      </div>
+    </section>
+
     <!-- Step 1: pick a reader -->
-    <section id="step-reader" class="step active">
+    <section id="step-reader" class="step">
       <h2>Step 1 - Plug in your NFC reader</h2>
       <p class="hint">Any PC/SC-compatible reader works (ACR122U, ACR1252U, PN532-based
         USB readers, etc.) - not only the ACR122U.</p>
